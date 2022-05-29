@@ -1,0 +1,53 @@
+8
+
+dir
+4
+https://svn.garage.maemo.org/svn/leafpad/tags/leafpad-0.8.14le-1/data/icons/40x40
+https://svn.garage.maemo.org/svn/leafpad
+
+
+
+2008-07-02T19:37:36.437188Z
+4
+rmoravcik
+
+
+svn:special svn:externals svn:needs-lock
+
+leafpad.png
+file
+
+
+
+
+2008-07-02T19:28:19.000000Z
+42c0f64550d21f04592a5b507bdaa84f
+2008-07-02T19:37:36.437188Z
+4
+rmoravcik
+has-props
+
+Makefile.in
+file
+
+
+
+
+2008-07-02T19:28:19.000000Z
+5242192c6876e290206913b058d22c63
+2008-07-02T19:37:36.437188Z
+4
+rmoravcik
+
+Makefile.am
+file
+
+
+
+
+2008-07-02T19:28:19.000000Z
+a5b24ca1671ebb230515b346b4543203
+2008-07-02T19:37:36.437188Z
+4
+rmoravcik
+

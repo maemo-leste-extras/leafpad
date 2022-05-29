@@ -1,0 +1,1559 @@
+Index: leafpad-0.8.17le/src/callback.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/callback.c	2009-11-13 19:32:14.000000000 +0000
++++ leafpad-0.8.17le/src/callback.c	2009-11-13 19:34:23.000000000 +0000
+@@ -24,6 +24,11 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
++#ifdef USE_HILDON
++#include <hildon/hildon.h>
++//#include "font-dialog.h"
++
++#endif
+ 
+ static void set_selection_bound(GtkTextBuffer *buffer, gint start, gint end)
+ {
+@@ -137,7 +142,11 @@
+ 		gtk_message_dialog_new_with_markup( NULL,
+ 			GTK_DIALOG_MODAL,
+ 			GTK_MESSAGE_INFO,
++#ifndef USE_HILDON
+ 			GTK_BUTTONS_OK,
++#else
++			GTK_BUTTONS_NONE,
++#endif
+ 			_("<b>Statistics</b>")
+ 	);
+ 
+@@ -271,12 +280,14 @@
+ 	
+ 	if (!flag) {
+ 		ifactory = gtk_item_factory_from_widget(pub->mw->menubar);
++#ifndef USE_HILDON
+ 		gtk_widget_set_sensitive(
+ 			gtk_item_factory_get_widget(ifactory, "/Search/Find Next"),
+ 			TRUE);
+ 		gtk_widget_set_sensitive(
+ 			gtk_item_factory_get_widget(ifactory, "/Search/Find Previous"),
+ 			TRUE);
++#endif
+ 		flag = TRUE;
+ 	}
+ }
+@@ -313,6 +324,14 @@
+ 	change_text_font_by_selector(pub->mw->view);
+ }
+ 
++#ifdef USE_HILDON
++void on_option_word_wrap(HildonCheckButton *button, gpointer user_data)
++{
++	gboolean active;
++	active = hildon_check_button_get_active (HILDON_CHECK_BUTTON(button));
++	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(pub->mw->view),
++		active ? GTK_WRAP_WORD : GTK_WRAP_NONE);
++#else
+ void on_option_word_wrap(void)
+ {
+ 	GtkItemFactory *ifactory;
+@@ -323,9 +342,17 @@
+ 		GTK_CHECK_MENU_ITEM(gtk_item_factory_get_item(ifactory, "/Options/Word Wrap")));
+ 	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(pub->mw->view),
+ 		state ? GTK_WRAP_WORD : GTK_WRAP_NONE);
++#endif
+ }
+ 
+-void on_option_line_numbers(void)
++#ifdef USE_HILDON
++void on_option_line_numbers(HildonCheckButton *button, gpointer user_data)
++{
++	gboolean active;
++	active = hildon_check_button_get_active (HILDON_CHECK_BUTTON(button));
++	show_line_numbers(pub->mw->view, active);
++#else
++void on_option_line_number(void)
+ {
+ 	GtkItemFactory *ifactory;
+ 	gboolean state;
+@@ -334,6 +361,7 @@
+ 	state = gtk_check_menu_item_get_active(
+ 		GTK_CHECK_MENU_ITEM(gtk_item_factory_get_item(ifactory, "/Options/Line Numbers")));
+ 	show_line_numbers(pub->mw->view, state);
++#endif
+ }
+ 
+ void on_option_always_on_top(void)
+@@ -346,6 +374,13 @@
+ #endif
+ }
+ 
++#ifdef USE_HILDON
++void on_option_auto_indent(HildonCheckButton *button, gpointer user_data)
++{
++	gboolean active;
++	active = hildon_check_button_get_active (HILDON_CHECK_BUTTON(button));
++	indent_set_state(active);
++#else
+ void on_option_auto_indent(void)
+ {
+ 	GtkItemFactory *ifactory;
+@@ -355,6 +390,7 @@
+ 	state = gtk_check_menu_item_get_active(
+ 		GTK_CHECK_MENU_ITEM(gtk_item_factory_get_item(ifactory, "/Options/Auto Indent")));
+ 	indent_set_state(state);
++#endif
+ }
+ 
+ void on_help_about(void)
+@@ -362,7 +398,7 @@
+ 	const gchar *copyright = "Copyright \xc2\xa9 2004-2008 Tarot Osuji";
+ 	const gchar *comments = _("GTK+ based simple text editor");
+ 	const gchar *authors[] = {
+-		"Tarot Osuji <tarot@sdf.lonestar.org>\nEduardo Lima <eblima@gmail.com>",
++		"Tarot Osuji <tarot@sdf.lonestar.org>\nEduardo Lima <eblima@gmail.com>\nMikko Vartiainen <mvartiainen@gmail.com>",
+ 		NULL
+ 	};
+ 	const gchar *translator_credits = _("translator-credits");
+@@ -418,3 +454,57 @@
+ 	gtk_widget_show(about);
+ #endif
+ }
++
++#ifdef USE_HILDON
++void on_find_close(void)
++{
++    gtk_widget_hide (pub->mw->find_toolbar);
++}
++
++void on_preferences(void)
++{
++	GtkWidget *font_button;
++	GtkWidget *word_wrap_button;
++	GtkWidget *line_numbers_button;
++	GtkWidget *auto_indent_button;
++
++	GtkDialog *dialog = GTK_DIALOG(
++	gtk_dialog_new_with_buttons("Settings",
++                                  GTK_WINDOW(NULL),
++                                  GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
++                                  dgettext("hildon-libs", "wdgt_bd_save"),
++                                  GTK_RESPONSE_OK,
++                                  NULL));
++	word_wrap_button = hildon_check_button_new (HILDON_SIZE_THUMB_HEIGHT | HILDON_SIZE_AUTO_WIDTH);
++	gtk_button_set_label (GTK_BUTTON (word_wrap_button), "Word Wrap");
++	hildon_check_button_set_active (HILDON_CHECK_BUTTON (word_wrap_button), gtk_text_view_get_wrap_mode(GTK_TEXT_VIEW(pub->mw->view)) );
++	g_signal_connect (word_wrap_button, "toggled", G_CALLBACK (on_option_word_wrap), NULL);
++	gtk_container_add(GTK_CONTAINER(dialog->vbox), word_wrap_button);
++
++	line_numbers_button = hildon_check_button_new (HILDON_SIZE_THUMB_HEIGHT | HILDON_SIZE_AUTO_WIDTH);
++	gtk_button_set_label (GTK_BUTTON (line_numbers_button), "Line Numbers");
++	hildon_check_button_set_active (HILDON_CHECK_BUTTON (line_numbers_button), get_line_numbers_visible());
++	g_signal_connect (line_numbers_button, "toggled", G_CALLBACK (on_option_line_numbers), NULL);
++	gtk_container_add(GTK_CONTAINER(dialog->vbox), line_numbers_button);
++
++	auto_indent_button = hildon_check_button_new (HILDON_SIZE_THUMB_HEIGHT | HILDON_SIZE_AUTO_WIDTH);
++	gtk_button_set_label (GTK_BUTTON (auto_indent_button), "Auto Indent");
++	hildon_check_button_set_active (HILDON_CHECK_BUTTON (auto_indent_button), indent_get_state());
++	g_signal_connect (auto_indent_button, "toggled", G_CALLBACK (on_option_auto_indent), NULL);
++	gtk_container_add(GTK_CONTAINER(dialog->vbox), auto_indent_button);
++
++	font_button = hildon_button_new (HILDON_SIZE_THUMB_HEIGHT | HILDON_SIZE_AUTO_WIDTH,HILDON_BUTTON_ARRANGEMENT_HORIZONTAL);
++	g_signal_connect (font_button, "clicked", G_CALLBACK (on_option_font), NULL);
++	hildon_button_set_title (HILDON_BUTTON (font_button), "Font");
++	gtk_container_add(GTK_CONTAINER(dialog->vbox), font_button);
++
++	gtk_widget_show_all (GTK_WIDGET (dialog));
++
++	gtk_dialog_run(dialog);
++
++	/* close the dialog */
++	gtk_widget_destroy(GTK_WIDGET(dialog));
++
++}
++#endif
++
+Index: leafpad-0.8.17le/src/callback.h
+===================================================================
+--- leafpad-0.8.17le.orig/src/callback.h	2009-11-13 19:32:15.000000000 +0000
++++ leafpad-0.8.17le/src/callback.h	2009-11-13 19:34:23.000000000 +0000
+@@ -20,6 +20,10 @@
+ #ifndef _CALLBACK_H
+ #define _CALLBACK_H
+ 
++#ifdef USE_HILDON
++#include <hildon/hildon.h>
++#endif
++
+ void on_file_new(void);
+ void on_file_open(void);
+ gint on_file_save(void);
+@@ -43,10 +47,22 @@
+ void on_search_replace(void);
+ void on_search_jump_to(void);
+ void on_option_font(void);
++#ifndef USE_HILDON
+ void on_option_word_wrap(void);
+ void on_option_line_numbers(void);
++#endif
+ void on_option_always_on_top(void);
++#ifndef USE_HILDON
+ void on_option_auto_indent(void);
++#endif
+ void on_help_about(void);
+ 
++#ifdef USE_HILDON
++void on_option_word_wrap(HildonCheckButton *button, gpointer user_data);
++void on_option_line_numbers(HildonCheckButton *button, gpointer user_data);
++void on_option_auto_indent(HildonCheckButton *button, gpointer user_data);
++void on_find_close (void);
++void on_preferences (void);
++#endif
++
+ #endif /* _CALLBACK_H */
+Index: leafpad-0.8.17le/src/dialog.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/dialog.c	2009-11-13 19:32:16.000000000 +0000
++++ leafpad-0.8.17le/src/dialog.c	2009-11-13 19:34:23.000000000 +0000
+@@ -64,9 +64,15 @@
+ 		str);
+ 	gtk_window_set_resizable(GTK_WINDOW(dialog), FALSE);
+ 	gtk_dialog_add_buttons(GTK_DIALOG(dialog),
++#ifdef USE_HILDON
++		GTK_STOCK_YES, GTK_RESPONSE_YES,
++		GTK_STOCK_NO, GTK_RESPONSE_NO,
++		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
++#else
+ 		GTK_STOCK_NO, GTK_RESPONSE_NO,
+ 		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+ 		GTK_STOCK_YES, GTK_RESPONSE_YES,
++#endif
+ 		NULL);
+ 	gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_YES);
+ 	g_free(str);
+Index: leafpad-0.8.17le/src/file.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/file.c	2009-11-13 19:32:15.000000000 +0000
++++ leafpad-0.8.17le/src/file.c	2009-11-13 19:34:23.000000000 +0000
+@@ -35,6 +35,13 @@
+ #	include "chardetect.h"
+ #endif
+ 
++#ifdef USE_HILDON
++#ifdef HAVE_MAEMO
++#include "leafpad.h"
++#include <hildon/hildon-banner.h>
++#endif
++#endif
++
+ gboolean check_file_writable(gchar *filename)
+ {
+ 	FILE *fp;
+@@ -125,8 +132,13 @@
+ 	
+ 	if (!g_file_get_contents(fi->filename, &contents, &length, &err)) {
+ 		if (g_file_test(fi->filename, G_FILE_TEST_EXISTS)) {
++#ifdef USE_HILDON
++			hildon_banner_show_information (GTK_WIDGET (pub->mw->window),
++				NULL, err->message);
++#else
+ 			run_dialog_message(gtk_widget_get_toplevel(view),
+ 				GTK_MESSAGE_ERROR, err->message);
++#endif
+ 			g_error_free(err);
+ 			return -1;
+ 		}
+@@ -227,12 +239,24 @@
+ 	if (err) {
+ 		switch (err->code) {
+ 		case G_CONVERT_ERROR_ILLEGAL_SEQUENCE:
++#ifdef USE_HILDON
++			str = g_strdup_printf (_("Can't convert codeset to '%s'"), fi->charset);
++			hildon_banner_show_information (GTK_WIDGET (pub->mw->window),
++				NULL, str);
++			g_free(str);
++#else
+ 			run_dialog_message(gtk_widget_get_toplevel(view),
+ 				GTK_MESSAGE_ERROR, _("Can't convert codeset to '%s'"), fi->charset);
++#endif
+ 			break;
+ 		default:
++#ifdef USE_HILDON
++			hildon_banner_show_information (GTK_WIDGET (pub->mw->window),
++				NULL, err->message);
++#else
+ 			run_dialog_message(gtk_widget_get_toplevel(view),
+ 				GTK_MESSAGE_ERROR, err->message);
++#endif
+ 		}
+ 		g_error_free(err);
+ 		return -1;
+@@ -240,13 +264,23 @@
+ 	
+ 	fp = fopen(fi->filename, "w");
+ 	if (!fp) {
++#ifdef USE_HILDON
++		hildon_banner_show_information (GTK_WIDGET (pub->mw->window),
++			NULL, _("Can't open file to write"));
++#else
+ 		run_dialog_message(gtk_widget_get_toplevel(view),
+ 			GTK_MESSAGE_ERROR, _("Can't open file to write"));
++#endif
+ 		return -1;
+ 	}
+ 	if (fputs(str, fp) == EOF) {
++#ifdef USE_HILDON
++		hildon_banner_show_information (GTK_WIDGET (pub->mw->window),
++			NULL, _("Can't write file"));
++#else
+ 		run_dialog_message(gtk_widget_get_toplevel(view),
+ 			GTK_MESSAGE_ERROR, _("Can't write file"));
++#endif
+ 		return -1;
+ 	}
+ 	
+Index: leafpad-0.8.17le/src/font.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/font.c	2009-11-13 19:32:15.000000000 +0000
++++ leafpad-0.8.17le/src/font.c	2009-11-13 19:34:23.000000000 +0000
+@@ -19,6 +19,12 @@
+ 
+ #include "leafpad.h"
+ 
++#ifdef USE_HILDON
++#ifdef HAVE_MAEMO
++#include <hildon/hildon-font-selection-dialog.h>
++#endif
++#endif
++
+ void set_text_font_by_name(GtkWidget *widget, gchar *fontname)
+ {
+ 	PangoFontDescription *font_desc;
+@@ -38,17 +44,67 @@
+ 
+ static gchar *get_font_name_by_selector(GtkWidget *window, gchar *current_fontname)
+ {
++#ifdef USE_HILDON
++	HildonFontSelectionDialog *dialog;
++	PangoFontDescription *font = NULL;
++	gint size, weight;
++	gboolean bold, italic, style;
++	const gchar *family = NULL;
++#else
+ 	GtkWidget *dialog;
++#endif
+ 	gchar *fontname;
+ 	
++#ifdef USE_HILDON
++	dialog = HILDON_FONT_SELECTION_DIALOG (hildon_font_selection_dialog_new (NULL, _("Font")));
++       	font = pango_font_description_new ();
++	font = pango_font_description_from_string (current_fontname);
++	family = pango_font_description_get_family (font);
++	size = pango_font_description_get_size (font) / PANGO_SCALE;
++	weight = pango_font_description_get_weight (font);
++	style = pango_font_description_get_style (font);
++        g_object_set (G_OBJECT (dialog),
++                      "bold", weight == PANGO_WEIGHT_BOLD ? TRUE : FALSE,
++                      "italic", style == PANGO_WEIGHT_NORMAL ? TRUE : FALSE,
++                      "size", size,
++                      "family", family,
++		      "color-set", FALSE,
++		      "underline", FALSE,
++		      "strikethrough", FALSE,
++		      "position", -1,
++                      NULL);
++
++#else
+ 	dialog = gtk_font_selection_dialog_new(_("Font"));
+ 	gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(window));
+ 	gtk_font_selection_dialog_set_font_name(GTK_FONT_SELECTION_DIALOG(dialog), current_fontname);
++#endif
+ 	if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK)
++#ifdef USE_HILDON
++	{
++		g_object_get (G_OBJECT(dialog),
++                    "family", &family, "size", &size, "bold", &bold, "italic", &italic, NULL);
++		pango_font_description_set_family (font, family);
++		pango_font_description_set_size (font, size * PANGO_SCALE);
++		if (bold) {
++			pango_font_description_set_weight (font, PANGO_WEIGHT_BOLD);
++		} else {
++			pango_font_description_set_weight (font, PANGO_WEIGHT_NORMAL);
++		}
++		if (italic) {
++			pango_font_description_set_style (font, PANGO_STYLE_ITALIC);
++		} else {
++			pango_font_description_set_style (font, PANGO_STYLE_NORMAL);
++		}
++
++		fontname = pango_font_description_to_string (font);
++	}
++#else
+ 		fontname = gtk_font_selection_dialog_get_font_name(GTK_FONT_SELECTION_DIALOG(dialog));
++#endif
+ 	else
+ 		fontname = NULL;
+-	gtk_widget_destroy(dialog);
++	gtk_widget_destroy (GTK_WIDGET (dialog));
+ 		
+ 	return fontname;
+ }
+Index: leafpad-0.8.17le/src/main.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/main.c	2009-11-13 19:32:16.000000000 +0000
++++ leafpad-0.8.17le/src/main.c	2009-11-13 19:34:23.000000000 +0000
+@@ -31,8 +31,14 @@
+ 
+ #ifdef USE_HILDON
+ #include <libosso.h>
++
++#ifdef HAVE_MAEMO_3
+ #include <hildon-widgets/hildon-program.h>
+ #include <hildon-widgets/hildon-window.h>
++#else
++#include <hildon/hildon-program.h>
++#endif
++
+ #endif
+ 
+ typedef struct {
+@@ -96,6 +102,11 @@
+ 	gtk_window_get_size(GTK_WINDOW(pub->mw->window), &width, &height);
+ 	fontname = get_font_name_from_widget(pub->mw->view);
+ 	ifactory = gtk_item_factory_from_widget(pub->mw->menubar);
++#ifdef USE_HILDON
++	wordwrap = gtk_text_view_get_wrap_mode(GTK_TEXT_VIEW(pub->mw->view));
++	linenumbers = get_line_numbers_visible();
++	autoindent = indent_get_state();
++#else
+ 	wordwrap = gtk_check_menu_item_get_active(
+ 		GTK_CHECK_MENU_ITEM(gtk_item_factory_get_item(ifactory,
+ 			"/Options/Word Wrap")));
+@@ -105,7 +116,8 @@
+ 	autoindent = gtk_check_menu_item_get_active(
+ 		GTK_CHECK_MENU_ITEM(gtk_item_factory_get_item(ifactory,
+ 			"/Options/Auto Indent")));
+-	
++#endif
++
+ #if GLIB_CHECK_VERSION(2, 6, 0)
+ 	path = g_build_filename(g_get_user_config_dir(), PACKAGE, NULL);
+ 	if (!g_file_test(path, G_FILE_TEST_IS_DIR)) {
+@@ -336,6 +348,7 @@
+ 		GTK_WINDOW(pub->mw->window), conf->width, conf->height);
+ 	set_text_font_by_name(pub->mw->view, conf->fontname);
+ 	
++#ifndef USE_HILDON
+ 	ifactory = gtk_item_factory_from_widget(pub->mw->menubar);
+ 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(
+ 		gtk_item_factory_get_widget(ifactory, "/Options/Word Wrap")),
+@@ -347,8 +360,20 @@
+ 	gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(
+ 		gtk_item_factory_get_widget(ifactory, "/Options/Auto Indent")),
+ 		conf->autoindent);
+-	
++#else
++	show_line_numbers(pub->mw->view, conf->linenumbers);
++	indent_set_state(conf->autoindent);
++	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(pub->mw->view),
++		conf->wordwrap ? GTK_WRAP_WORD : GTK_WRAP_NONE);
++	indent_refresh_tab_width(pub->mw->view);
++
++#endif
++
+ 	gtk_widget_show_all(pub->mw->window);
++#ifdef USE_HILDON
++	gtk_widget_show_all (pub->mw->find_toolbar);
++	gtk_widget_hide (pub->mw->find_toolbar);
++#endif
+ 	g_free(conf->fontname);
+ 	g_free(conf);
+ 	
+Index: leafpad-0.8.17le/src/menu.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/menu.c	2009-11-13 19:32:13.000000000 +0000
++++ leafpad-0.8.17le/src/menu.c	2009-11-13 19:34:23.000000000 +0000
+@@ -21,6 +21,7 @@
+ #include <gdk/gdkkeysyms.h>
+ 
+ #ifdef USE_HILDON
++#include <hildon/hildon.h>
+ #define ITEM_FACTORY_TYPE GTK_TYPE_MENU
+ #else
+ #define ITEM_FACTORY_TYPE GTK_TYPE_MENU_BAR
+@@ -118,7 +119,7 @@
+ #if GTK_CHECK_VERSION(2, 6, 0)
+ 		G_CALLBACK(on_help_about), 0, "<StockItem>", GTK_STOCK_ABOUT },
+ #else
+-		G_CALLBACK(on_help_about), 0, "<StockItem>", "my-gtk-about" },
++		G_CALLBACK(on_help_about), 0 , "my-gtk-about", GTK_STOCK_ABOUT },
+ #endif
+ };
+ 
+@@ -187,16 +188,19 @@
+ 	gtk_widget_add_accelerator(
+ 		gtk_item_factory_get_widget(ifactory, "/Edit/Redo"),
+ 		"activate", accel_group, GDK_Y, GDK_CONTROL_MASK, 0);
++#ifndef USE_HILDON
+ 	gtk_widget_add_accelerator(
+ 		gtk_item_factory_get_widget(ifactory, "/Search/Find Next"),
+ 		"activate", accel_group, GDK_F3, 0, 0);
+ 	gtk_widget_add_accelerator(
+ 		gtk_item_factory_get_widget(ifactory, "/Search/Find Previous"),
+ 		"activate", accel_group, GDK_F3, GDK_SHIFT_MASK, 0);
++#endif
+ 	gtk_widget_add_accelerator(
+ 		gtk_item_factory_get_widget(ifactory, "/Search/Replace..."),
+ 		"activate", accel_group, GDK_R, GDK_CONTROL_MASK, 0);
+ 	
++#ifndef USE_HILDON
+ 	/* initialize sensitivities */
+ 	gtk_widget_set_sensitive(
+ 		gtk_item_factory_get_widget(ifactory, "/Search/Find Next"),
+@@ -213,4 +217,63 @@
+ 	menu_sensitivity_from_selection_bound(FALSE);
+ 	
+ 	return gtk_item_factory_get_widget(ifactory, "<main>");
++#else
++	HildonSizeType button_size = HILDON_SIZE_FINGER_HEIGHT | HILDON_SIZE_AUTO_WIDTH;
++	HildonAppMenu *menu = HILDON_APP_MENU (hildon_app_menu_new ());
++	GtkButton *button;
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("New"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_file_new), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("Open"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_file_open), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("Save"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_file_save), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("Save as"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_file_save_as), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("Search"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_search_find), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("Replace"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_search_replace), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("Jump to"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_search_jump_to), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("Statistics"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_file_stats), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("Preferences"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_preferences), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	button = GTK_BUTTON (hildon_gtk_button_new (button_size));
++	gtk_button_set_label (button, _("About"));
++	g_signal_connect (G_OBJECT (button), "clicked", G_CALLBACK (on_help_about), window);
++	hildon_app_menu_append (menu, GTK_BUTTON (button));
++
++	gtk_widget_show_all (GTK_WIDGET (menu));
++
++	return menu;
++#endif
+ }
+Index: leafpad-0.8.17le/src/search.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/search.c	2009-11-13 19:32:16.000000000 +0000
++++ leafpad-0.8.17le/src/search.c	2009-11-13 19:45:18.000000000 +0000
+@@ -19,10 +19,20 @@
+ 
+ #include <string.h>
+ 
++#include "leafpad.h"
++
+ #ifdef HAVE_CONFIG_H
+ #	include "config.h"
+ #endif
+ 
++#ifdef USE_HILDON
++#ifdef HAVE_MAEMO
++#include <hildon/hildon-find-toolbar.h>
++#include <hildon/hildon-banner.h>
++#include <hildon/hildon-text-view.h>
++#endif
++#endif
++
+ #include <gtk/gtk.h>
+ #include "i18n.h"
+ #include "dialog.h"
+@@ -88,8 +98,12 @@
+ 	GtkTextIter iter, match_start, match_end;
+ 	gboolean res;
+ 	GtkSourceSearchFlags search_flags = GTK_SOURCE_SEARCH_VISIBLE_ONLY | GTK_SOURCE_SEARCH_TEXT_ONLY;
++#ifdef USE_HILDON
++	GtkTextBuffer *textbuffer = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(textview));
++#else
+ 	GtkTextBuffer *textbuffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
+-	
++#endif
++
+ 	if (!string_find)
+ 		return FALSE;
+ 	
+@@ -139,9 +153,12 @@
+ 		scroll_to_cursor(textbuffer, 0.05);
+ 	} 
+ 	else if (direction == 0)
++#ifdef USE_HILDON
++		hildon_banner_show_information (GTK_WIDGET (pub->mw->window), NULL,
++#else
+ 		run_dialog_message(gtk_widget_get_toplevel(textview), GTK_MESSAGE_WARNING,
++#endif
+ 			_("Search string not found"));
+-	
+ 	return res;
+ }
+ 
+@@ -153,8 +170,13 @@
+ 	gint num = 0, offset;
+ 	GtkWidget *q_dialog = NULL;
+ 	GtkSourceSearchFlags search_flags = GTK_SOURCE_SEARCH_VISIBLE_ONLY | GTK_SOURCE_SEARCH_TEXT_ONLY;	
++#ifdef USE_HILDON
++	gchar *str;
++	GtkTextBuffer *textbuffer = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(textview));
++#else
+ 	GtkTextBuffer *textbuffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
+-	
++#endif
++
+ 	if (!match_case)
+ 		search_flags = search_flags | GTK_SOURCE_SEARCH_CASE_INSENSITIVE;
+ 	
+@@ -259,8 +281,14 @@
+ 	if (replace_all) {
+ 		gtk_text_buffer_get_iter_at_mark(textbuffer, &iter, mark_init);
+ 		gtk_text_buffer_place_cursor(textbuffer, &iter);
++#ifdef USE_HILDON
++		str = g_strdup_printf (_("%d strings replaced"), num);
++		hildon_banner_show_information (GTK_WIDGET (pub->mw->window), NULL, str);
++		g_free(str);
++#else
+ 		run_dialog_message(gtk_widget_get_toplevel(textview), GTK_MESSAGE_INFO,
+ 			_("%d strings replaced"), num);
++#endif
+ 		undo_set_sequency(FALSE);
+ 	}
+ 	
+@@ -303,6 +331,32 @@
+ 	replace_all = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(widget));
+ }
+ 
++#ifdef USE_HILDON
++static void on_find_search (GtkWidget *widget)
++{
++	g_free (string_find);
++
++	g_object_get (G_OBJECT(widget), "prefix", &string_find, NULL);
++
++	if (strlen (string_find))
++		document_search_real (pub->mw->view, 0);
++}
++
++GtkWidget *create_search_bar(GtkWidget *window)
++{
++	HildonFindToolbar *find_toolbar;
++
++	find_toolbar = HILDON_FIND_TOOLBAR (hildon_find_toolbar_new (NULL));
++	g_signal_connect (G_OBJECT(find_toolbar), "search",
++		G_CALLBACK (on_find_search), NULL);
++
++	g_signal_connect(G_OBJECT(find_toolbar), "close",
++		G_CALLBACK(on_find_close), NULL);
++
++	return GTK_WIDGET (find_toolbar);
++}
++#endif
++
+ gint run_dialog_search(GtkWidget *textview, gint mode)
+ {
+ 	GtkWidget *dialog;
+@@ -318,19 +372,39 @@
+ 	gint res;
+ 	
+ 	if (mode)
++        {
++#ifdef USE_HILDON
++		GtkWidget *button;
++#endif
+ 		dialog = gtk_dialog_new_with_buttons(_("Replace"),
+ 			GTK_WINDOW(gtk_widget_get_toplevel(textview)),
+ 			GTK_DIALOG_DESTROY_WITH_PARENT,
+ 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
++#ifndef USE_HILDON
+ 			GTK_STOCK_FIND_AND_REPLACE, GTK_RESPONSE_OK,
++#endif
+ 			NULL);
++#ifdef USE_HILDON
++		button = gtk_dialog_add_button(GTK_DIALOG(dialog), GTK_STOCK_FIND_AND_REPLACE, GTK_RESPONSE_OK);
++		hildon_gtk_widget_set_theme_size(button, HILDON_SIZE_AUTO_WIDTH | HILDON_SIZE_FINGER_HEIGHT);
++#endif
++        }
+ 	else
++#ifndef USE_HILDON
+ 		dialog = gtk_dialog_new_with_buttons(_("Find"),
+ 			GTK_WINDOW(gtk_widget_get_toplevel(textview)),
+ 			GTK_DIALOG_DESTROY_WITH_PARENT,
+ 			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+ 			GTK_STOCK_FIND, GTK_RESPONSE_OK,
+ 			NULL);
++#else
++	{
++		gtk_widget_show (pub->mw->find_toolbar);
++		hildon_find_toolbar_highlight_entry (pub->mw->find_toolbar, TRUE);
++	}
++
++	if (mode) {
++#endif
+ 	gtk_dialog_set_has_separator(GTK_DIALOG(dialog), FALSE);
+ 	
+ 	table = gtk_table_new(mode + 2, 2, FALSE);
+@@ -364,7 +438,11 @@
+ 		G_CALLBACK(toggle_sensitivity), NULL);
+ #endif
+ #if SEARCH_HISTORY
++#ifdef USE_HILDON
++	 buffer = hildon_text_view_get_buffer (HILDON_TEXT_VIEW (textview));
++#else
+ 	 buffer = gtk_text_view_get_buffer (GTK_TEXT_VIEW (textview));
++#endif
+ 	 if (gtk_text_buffer_get_selection_bounds (buffer, &start_iter, &end_iter)) {
+  		if (string_find != NULL)
+ 		 g_free(string_find);
+@@ -449,6 +527,11 @@
+ 		}
+ 	}
+ 	
++#ifdef USE_HILDON
++	} else {
++		res = GTK_RESPONSE_CANCEL;
++	}
++#endif
+ 	return res;
+ }
+ 
+@@ -462,9 +545,13 @@
+ 	GtkAdjustment *spinner_adj;
+ 	GtkTextIter iter;
+ 	gint num, max_num;
+-	
++
++#ifdef USE_HILDON
++	GtkTextBuffer *textbuffer = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(textview));
++#else
+ 	GtkTextBuffer *textbuffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(textview));
+-	
++#endif
++
+ 	gtk_text_buffer_get_iter_at_mark(textbuffer, &iter,
+ 		gtk_text_buffer_get_insert(textbuffer));
+ 	num = gtk_text_iter_get_line(&iter) + 1;
+Index: leafpad-0.8.17le/src/search.h
+===================================================================
+--- leafpad-0.8.17le.orig/src/search.h	2009-11-13 19:32:13.000000000 +0000
++++ leafpad-0.8.17le/src/search.h	2009-11-13 19:34:23.000000000 +0000
+@@ -24,4 +24,8 @@
+ gint run_dialog_search(GtkWidget *textview, gint mode);
+ void run_dialog_jump_to(GtkWidget *textview);
+ 
++#ifdef USE_HILDON
++GtkWidget *create_search_bar(GtkWidget *window);
++#endif
++
+ #endif /* _SEARCH_H */
+Index: leafpad-0.8.17le/src/selector.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/selector.c	2009-11-13 19:32:15.000000000 +0000
++++ leafpad-0.8.17le/src/selector.c	2009-11-13 19:34:23.000000000 +0000
+@@ -27,7 +27,14 @@
+ #define DEFAULT_ITEM_NUM 2+1
+ 
+ #ifdef USE_HILDON
++
++#ifdef HAVE_MAEMO_3
+ #include <hildon-fm/hildon-widgets/hildon-file-chooser-dialog.h>
++#else
++#include <hildon/hildon-file-chooser-dialog.h>
++#include <hildon/hildon-banner.h>
++#endif
++
+ #endif
+ 
+ static gint mode;
+@@ -202,8 +209,12 @@
+ 			g_error_free(err);
+ 			gtk_widget_hide(dialog);
+ 			str = g_strdup_printf(_("'%s' is not supported"), gtk_entry_get_text(GTK_ENTRY(entry)));
++#ifdef USE_HILDON
++			hildon_banner_show_information (GTK_WIDGET (pub->mw->window), NULL, str);
++#else
+ 			run_dialog_message(gtk_widget_get_toplevel(GTK_WIDGET(option_menu)),
+ 				GTK_MESSAGE_ERROR, str);
++#endif
+ 			g_free(str);
+ 		} else {
+ 			g_free(selected_fi->charset);
+@@ -335,7 +346,9 @@
+ //	align = gtk_alignment_new(0.5, 0, 0, 0);
+ 	align = gtk_alignment_new(1, 0, 0, 0);
+ #if ENABLE_CHOOSER
++#ifndef USE_HILDON
+ 	gtk_file_chooser_set_extra_widget(GTK_FILE_CHOOSER(selector), align);
++#endif
+ #else
+ 	gtk_box_pack_end(GTK_BOX(GTK_FILE_SELECTION(selector)->main_vbox),
+ 		align, FALSE, FALSE, 0);
+Index: leafpad-0.8.17le/src/window.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/window.c	2009-11-13 19:32:14.000000000 +0000
++++ leafpad-0.8.17le/src/window.c	2009-11-13 19:34:23.000000000 +0000
+@@ -20,8 +20,52 @@
+ #include "leafpad.h"
+ 
+ #ifdef USE_HILDON
++
++#ifdef HAVE_MAEMO_3
+ #include <hildon-widgets/hildon-window.h>
++#else
++#include <hildon/hildon-program.h>
++#include <hildon/hildon-defines.h>
++#include <hildon/hildon-text-view.h>
++#include <hildon/hildon-pannable-area.h>
++#endif
++
++static gboolean
++key_press_event(GtkWidget *widget, GdkEventKey *event, MainWin *mw)
++{
++	GtkItemFactory *ifactory;
++	gboolean state;
++
++	switch (event->keyval) {
++		case HILDON_HARDKEY_FULLSCREEN:
++		case 0:
++			/*ifactory = gtk_item_factory_from_widget (mw->menubar);
++			state = gtk_check_menu_item_get_active (
++				GTK_CHECK_MENU_ITEM (gtk_item_factory_get_item (ifactory, "/View/Fullscreen")));
++
++			if (state) {
++				gtk_window_unfullscreen (GTK_WINDOW (widget));
++				gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (
++						gtk_item_factory_get_item (ifactory, "/View/Fullscreen")), FALSE);
++
++			} else {
++				gtk_window_fullscreen (GTK_WINDOW (widget));
++				gtk_check_menu_item_set_active (GTK_CHECK_MENU_ITEM (
++						gtk_item_factory_get_item (ifactory, "/View/Fullscreen")), TRUE);
++			}*/
++			if (mw->fullscreen) {
++				gtk_window_unfullscreen (GTK_WINDOW (widget));
++				mw->fullscreen = FALSE;
++			} else {
++				gtk_window_fullscreen (GTK_WINDOW (widget));
++				mw->fullscreen = TRUE;
++			}
++			break;
++	}
++	return FALSE;
++}
+ #endif
++
+ /*
+ static void cb_scroll_event(GtkAdjustment *adj, GtkWidget *view)
+ {
+@@ -32,7 +76,11 @@
+ {
+ 	GtkWidget *window;
+ 	GtkWidget *vbox;
++#ifdef USE_HILDON
++	HildonAppMenu *menubar;
++#else
+  	GtkWidget *menubar;
++#endif
+  	GtkWidget *sw;
+  	GtkWidget *view;
+ // 	gint size;
+@@ -42,13 +90,15 @@
+ 	
+ #ifdef USE_HILDON
+ 	window = hildon_window_new();
++	g_signal_connect (window, "key-press-event", G_CALLBACK (key_press_event), mw);
++	mw->fullscreen = FALSE;
+ #else
+ 	window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+ #endif
+ 
+ //	gtk_window_set_title(GTK_WINDOW(window), PACKAGE_NAME);
+ 	gtk_widget_set_name(window, PACKAGE_NAME);
+-	
++
+ /*
+ #if GTK_CHECK_VERSION(2, 4, 0)
+ //	size = gtk_icon_size_lookup(GTK_ICON_SIZE_LARGE_TOOLBAR, &size, NULL);
+@@ -81,16 +131,22 @@
+ 	menubar = create_menu_bar(window);
+ 
+ #ifdef USE_HILDON
+-	hildon_window_set_menu (HILDON_WINDOW (window), GTK_MENU (menubar));
++	//gtk_widget_set_name(window, PACKAGE_NAME);
++	hildon_window_set_app_menu (HILDON_WINDOW (window), HILDON_APP_MENU  (menubar));
++	mw->find_toolbar = create_search_bar (window);
++	hildon_window_add_toolbar (HILDON_WINDOW (window), GTK_TOOLBAR (mw->find_toolbar));
++	mw->find_visible = FALSE;
++	sw = hildon_pannable_area_new();
++	g_object_set(sw, "mov-mode", HILDON_MOVEMENT_MODE_BOTH);
+ #else
+ 	gtk_box_pack_start(GTK_BOX(vbox), menubar, FALSE, FALSE, 0);
+-#endif
+-
+ 	sw = gtk_scrolled_window_new(NULL, NULL);
+ 	gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(sw),
+ 		GTK_POLICY_AUTOMATIC, GTK_POLICY_ALWAYS);
+ 	gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(sw),
+ 		GTK_SHADOW_IN);
++#endif
++
+ 	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
+ 	
+ 	view = create_text_view();
+@@ -106,7 +162,11 @@
+ 	mw->window = window;
+ 	mw->menubar = menubar;
+ 	mw->view = view;
++#ifdef USE_HILDON
++	mw->buffer = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(view));
++#else
+ 	mw->buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
++#endif
+ 	
+ 	return mw;
+ }
+Index: leafpad-0.8.17le/src/window.h
+===================================================================
+--- leafpad-0.8.17le.orig/src/window.h	2009-11-13 19:32:14.000000000 +0000
++++ leafpad-0.8.17le/src/window.h	2009-11-13 19:34:23.000000000 +0000
+@@ -25,6 +25,12 @@
+ 	GtkWidget *menubar;
+ 	GtkWidget *view;
+ 	GtkTextBuffer *buffer;
++
++#ifdef USE_HILDON
++	GtkWidget *find_toolbar;
++	gboolean find_visible;
++	gboolean fullscreen;
++#endif
+ } MainWin;
+ 
+ MainWin *create_main_window(void);
+Index: leafpad-0.8.17le/src/view.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/view.c	2009-11-13 19:32:14.000000000 +0000
++++ leafpad-0.8.17le/src/view.c	2009-11-13 19:34:23.000000000 +0000
+@@ -20,7 +20,9 @@
+ #include "leafpad.h"
+ #include <gdk/gdkkeysyms.h>
+ #include <string.h>
+-
++#ifdef USE_HILDON
++#include <hildon/hildon-text-view.h>
++#endif
+ static gint keyval;
+ static gboolean view_scroll_flag = FALSE;
+ 
+@@ -111,8 +113,11 @@
+ 	
+ 	if (check_preedit(view))
+ 		return FALSE;
+-	
++#ifdef USE_HILDON
++	buffer = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(view));
++#else
+ 	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
++#endif
+ 	mark = gtk_text_buffer_get_insert(buffer);
+ 	gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+ 	gtk_text_view_get_iter_location(GTK_TEXT_VIEW(view), &iter, &prev_rect);
+@@ -164,7 +169,11 @@
+ 			return TRUE;
+ 		}
+ 		break;
++#ifdef USE_HILDON
++	case GDK_KP_Enter:
++#else
+ 	case GDK_Return:
++#endif
+ #ifndef ENABLE_SHIFTENTER
+ 		if (indent_get_state()) {
+ #else
+@@ -204,8 +213,12 @@
+ {
+ 	GtkTextIter iter, start, end;
+ 	gint x, y;
+-	
++
++#ifdef USE_HILDON
++	GtkTextBuffer *buffer = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(view));
++#else
+ 	GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
++#endif
+ 	
+ 	if ((event->button) == 3 && (event->type == GDK_BUTTON_PRESS)) {
+ 		gtk_text_view_window_to_buffer_coords(GTK_TEXT_VIEW(view),
+@@ -326,9 +339,13 @@
+ {
+  	GtkWidget *view;
+ 	GtkTextBuffer *buffer;
+-	
++#ifdef USE_HILDON
++	view = hildon_text_view_new();
++	buffer = hildon_text_view_get_buffer(GTK_TEXT_VIEW(view));
++#else
+ 	view = gtk_text_view_new();
+ 	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
++#endif
+ 	
+ //	gtk_text_view_set_left_margin(GTK_TEXT_VIEW(view), 1);
+ //	gtk_text_view_set_right_margin(GTK_TEXT_VIEW(view), 1);
+Index: leafpad-0.8.17le/src/indent.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/indent.c	2009-11-13 19:32:16.000000000 +0000
++++ leafpad-0.8.17le/src/indent.c	2009-11-13 19:34:23.000000000 +0000
+@@ -21,6 +21,9 @@
+ #include <gtk/gtk.h>
+ //#include <gdk/gdkkeysyms.h>
+ #include <undo.h>
++#ifdef USE_HILDON
++#include <hildon/hildon-text-view.h>
++#endif
+ 
+ static gboolean auto_indent = FALSE;
+ static gint default_tab_width = 8;
+@@ -66,9 +69,13 @@
+ {
+ 	GtkTextIter iter;
+ 	gchar *ind, *str;
+-	
++
++#ifdef USE_HILDON
++	GtkTextBuffer *buffer = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(text_view));
++#else
+ 	GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(text_view));
+-	
++#endif
++
+ 	g_signal_emit_by_name(G_OBJECT(buffer), "begin-user-action");
+ 	gtk_text_buffer_delete_selection(buffer, TRUE, TRUE);
+ 	gtk_text_buffer_get_iter_at_mark(buffer, &iter, gtk_text_buffer_get_insert(buffer));
+Index: leafpad-0.8.17le/src/gtkprint.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/gtkprint.c	2009-11-13 19:32:13.000000000 +0000
++++ leafpad-0.8.17le/src/gtkprint.c	2009-11-13 19:34:23.000000000 +0000
+@@ -18,6 +18,9 @@
+  */
+ 
+ #include <gtk/gtk.h>
++#ifdef USE_HILDON
++#include <hildon/hildon-text-view.h>
++#endif
+ 
+ #if GTK_CHECK_VERSION(2, 10, 0)
+ 
+@@ -48,7 +51,11 @@
+ 	gint layout_height;
+ 	gchar *text;
+ 	GtkTextIter start, end;
++#ifdef USE_HILDON
++	GtkTextBuffer *buffer = hildon_text_view_get_buffer(data);
++#else
+ 	GtkTextBuffer *buffer = gtk_text_view_get_buffer(data);
++#endif
+ 	PangoTabArray *tabs;
+ 	
+ 	gtk_text_buffer_get_bounds(buffer, &start, &end);
+Index: leafpad-0.8.17le/src/font-dialog.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ leafpad-0.8.17le/src/font-dialog.c	2009-11-13 19:34:23.000000000 +0000
+@@ -0,0 +1,390 @@
++#include <string.h>
++#include <vte/vte.h>
++#include <gconf/gconf-client.h>
++#include <hildon/hildon.h>
++#include "font-dialog.h"
++#include "terminal-gconf.h"
++
++#define PREVIEW_TEXT "drwxr-xr-x 2 user users"
++
++enum {
++  FONT_NAME_STRING_COLUMN,
++  FONT_NAME_FAMILY_COLUMN,
++  FONT_NAME_FACE_COLUMN,
++  FONT_NAME_PFD_COLUMN
++};
++
++enum {
++  FONT_SIZE_STRING_COLUMN,
++  FONT_SIZE_INT_COLUMN
++};
++
++typedef struct
++{
++  GtkDialog *dlg;
++  GtkWidget *preview;
++  GtkWidget *preview_bg;
++
++  GtkTreeView *tv_size;
++  GtkTreeModel *tm_size;
++  GtkTreeSelection *sel_size;
++
++  GtkTreeView *tv_name;
++  GtkTreeModel *tm_name;
++  GtkTreeSelection *sel_name;
++
++  GtkWidget *fg_clr;
++  GtkWidget *bg_clr;
++} FontDialog;
++
++static FontDialog font_dialog = { NULL };
++
++static const guint8 font_sizes[] = {6, 8, 10, 12, 16, 24, 32};
++
++static void
++tv_realize(GtkTreeView *tv, GtkWidget *dlg)
++{
++  GtkTreeIter itr;
++  GtkTreeModel *tm;
++  GtkTreeSelection *sel = gtk_tree_view_get_selection(tv);
++
++  if (gtk_tree_selection_get_selected(sel, &tm, &itr)) {
++    GtkTreePath *tp = gtk_tree_model_get_path(tm, &itr);
++    GdkRectangle rc;
++    gint y;
++
++    gtk_tree_view_get_background_area(tv, tp, NULL, &rc);
++    gtk_tree_view_convert_bin_window_to_tree_coords(tv, 0, rc.y, NULL, &y);
++    hildon_pannable_area_scroll_to(HILDON_PANNABLE_AREA(gtk_widget_get_parent(GTK_WIDGET(tv))), -1, y + (rc.height >> 1));
++  }
++
++  g_signal_handlers_disconnect_by_func(G_OBJECT(tv), (GCallback)tv_realize, dlg);
++  if (!GPOINTER_TO_INT(g_object_get_data(G_OBJECT(tv), "have-show-handler"))) {
++    g_signal_connect_swapped(G_OBJECT(dlg), "show", (GCallback)tv_realize, tv);
++    g_object_set_data(G_OBJECT(tv), "have-show-handler", GINT_TO_POINTER(1));
++  }
++}
++
++static void
++select_iter(GtkTreeView *tv, GtkTreeModel *tm, GtkTreeIter *itr)
++{
++  GtkTreePath *tp = gtk_tree_model_get_path(tm, itr);
++
++  gtk_tree_selection_select_iter(gtk_tree_view_get_selection(tv), itr);
++  gtk_tree_path_free(tp);
++}
++
++static int
++compare_faces(PangoFontFace **p_face1, PangoFontFace **p_face2, gpointer null)
++{
++  /* most sig. ... weight ... style ... stretch ... variant ... least sig. */
++
++  PangoFontDescription *pfd1 = pango_font_face_describe((*p_face1)), *pfd2 = pango_font_face_describe((*p_face2));
++
++  int weight1, style1, stretch1, variant1,
++      weight2, style2, stretch2, variant2;
++
++  weight1  = pango_font_description_get_weight(pfd1);
++  style1   = pango_font_description_get_style(pfd1);
++  stretch1 = pango_font_description_get_stretch(pfd1);
++  variant1 = pango_font_description_get_variant(pfd1);
++
++  pango_font_description_free(pfd1);
++
++  weight2  = pango_font_description_get_weight(pfd2);
++  style2   = pango_font_description_get_style(pfd2);
++  stretch2 = pango_font_description_get_stretch(pfd2);
++  variant2 = pango_font_description_get_variant(pfd2);
++
++  pango_font_description_free(pfd2);
++
++  return
++    (weight1 != weight2)
++      ? ((weight1 < weight2) ? -1 : 1)
++      : (style1 != style2)
++        ? ((style1 < style2) ? -1 : 1)
++        : (stretch1 != stretch2)
++          ? ((stretch1 < stretch2) ? -1 : 1)
++          : (variant1 != variant2)
++            ? ((variant1 < variant2) ? -1 : 1)
++            : 0;
++}
++
++static void
++select_font(char *name, int size, FontDialog *fd)
++{
++  gboolean do_break = FALSE;
++  GtkTreeIter itr;
++  GtkTreeModel *tm;
++  char *str = g_strdup_printf("%s %d", name, size);
++  PangoFontDescription *pfd = pango_font_description_from_string(str),
++                       *pfd_list = NULL;
++  PangoFontFamily *family = NULL;
++  PangoFontFace *face = NULL;
++  int list_size = 0;
++
++  tm = gtk_tree_view_get_model(fd->tv_name);
++  if (gtk_tree_model_get_iter_first(tm, &itr))
++    do {
++      gtk_tree_model_get(tm, &itr, FONT_NAME_FAMILY_COLUMN, &family, FONT_NAME_FACE_COLUMN, &face, -1);
++      if (!strcmp(pango_font_family_get_name(family), pango_font_description_get_family(pfd))) {
++        pfd_list = pango_font_face_describe(face);
++        do_break = ((pango_font_description_get_weight(pfd_list)  == pango_font_description_get_weight(pfd)  &&
++                     pango_font_description_get_style(pfd_list)   == pango_font_description_get_style(pfd)   &&
++                     pango_font_description_get_stretch(pfd_list) == pango_font_description_get_stretch(pfd) &&
++                     pango_font_description_get_variant(pfd_list) == pango_font_description_get_variant(pfd)));
++        pango_font_description_free(pfd_list);
++        if (do_break) break;
++      }
++    } while (gtk_tree_model_iter_next(tm, &itr));
++
++  if (do_break)
++    select_iter(fd->tv_name, tm, &itr);
++
++  pango_font_description_free(pfd);
++  g_free(str);
++
++  do_break = FALSE;
++  tm = gtk_tree_view_get_model(fd->tv_size);
++  if (gtk_tree_model_get_iter_first(tm, &itr))
++    do {
++      gtk_tree_model_get(tm, &itr, FONT_SIZE_INT_COLUMN, &list_size, -1);
++      do_break = (list_size == size);
++      if (do_break) break;
++    } while (gtk_tree_model_iter_next(tm, &itr));
++
++  if (do_break)
++    select_iter(fd->tv_size, tm, &itr);
++}
++
++static void
++sel_changed(GtkTreeSelection *sel, FontDialog *fd)
++{
++  PangoFontDescription *pfd = NULL;
++  GtkTreeIter itr;
++  int size;
++
++  if (gtk_tree_selection_get_selected(fd->sel_size, NULL, &itr)) {
++    gtk_tree_model_get(fd->tm_size, &itr, FONT_SIZE_INT_COLUMN, &size, -1);
++
++    if (gtk_tree_selection_get_selected(fd->sel_name, NULL, &itr))
++      gtk_tree_model_get(fd->tm_name, &itr, FONT_NAME_PFD_COLUMN, &pfd, -1);
++  }
++
++  if (pfd != NULL) {
++    if (size > 0) {
++      pango_font_description_set_size(pfd, size * PANGO_SCALE);
++      gtk_widget_modify_font(fd->preview, pfd);
++    }
++    pango_font_description_free(pfd);
++  }
++}
++
++static void
++clr_changed(GObject *btn, GParamSpec *pspec, FontDialog *fd)
++{
++  GdkColor *clr_fg = NULL, *clr_bg = NULL;
++
++  g_object_get(G_OBJECT(fd->fg_clr), "color", &clr_fg, NULL);
++  g_object_get(G_OBJECT(fd->bg_clr), "color", &clr_bg, NULL);
++  gtk_widget_modify_bg(GTK_WIDGET(fd->preview_bg), GTK_STATE_NORMAL, clr_bg);
++  gtk_widget_modify_base(GTK_WIDGET(fd->preview_bg), GTK_STATE_NORMAL, clr_bg);
++  gtk_widget_modify_fg(GTK_WIDGET(fd->preview), GTK_STATE_NORMAL, clr_fg);
++  gdk_color_free(clr_fg);
++  gdk_color_free(clr_bg);
++}
++
++static void
++preview_realize(GtkWidget *preview, FontDialog *fd)
++{
++  g_object_notify(G_OBJECT(fd->fg_clr), "color");
++}
++
++static void
++create_font_dialog(FontDialog *fd)
++{
++  int Nix;
++  char *str;
++  GtkTreeIter itr_size;
++  GtkWidget
++    *hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, "spacing", 8, NULL),
++    *align,
++    *pan;
++  GtkListStore
++    *ls_name = gtk_list_store_new(4, G_TYPE_STRING, G_TYPE_OBJECT, G_TYPE_OBJECT, PANGO_TYPE_FONT_DESCRIPTION),
++    *ls_size = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
++  GtkCellLayout *cl;
++  GtkCellRenderer *cr;
++  fd->dlg = GTK_DIALOG(gtk_dialog_new_with_buttons(g_dgettext("gtk20", "Pick a Font"), NULL, GTK_DIALOG_MODAL | GTK_DIALOG_NO_SEPARATOR,
++      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_SAVE, GTK_RESPONSE_OK, NULL));
++  fd->preview = g_object_new(GTK_TYPE_LABEL, "visible", TRUE, "label", PREVIEW_TEXT, "justify", GTK_JUSTIFY_LEFT, "use-underline", FALSE, NULL);
++  fd->preview_bg = g_object_new(GTK_TYPE_EVENT_BOX, "visible", TRUE, NULL);
++  gtk_container_add(GTK_CONTAINER(fd->preview_bg),
++    g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", (double)0.0, "yalign", (double)0.0, "xscale", (double)0.0, "yscale", (double)0.0, "child", fd->preview, NULL));
++  g_signal_connect(G_OBJECT(fd->preview), "realize", (GCallback)preview_realize, fd);
++
++  fd->tm_name = GTK_TREE_MODEL(ls_name);
++  fd->tv_name = g_object_new(GTK_TYPE_TREE_VIEW, "visible", TRUE, "hildon-ui-mode", HILDON_UI_MODE_EDIT, "model", ls_name, "enable-search", FALSE, NULL);
++  fd->sel_name = gtk_tree_view_get_selection(fd->tv_name);
++  g_signal_connect(G_OBJECT(gtk_tree_view_get_selection(fd->tv_name)), "changed", (GCallback)sel_changed, fd);
++  cr = gtk_cell_renderer_text_new();
++  cl = GTK_CELL_LAYOUT(gtk_tree_view_column_new_with_attributes("", cr, "text", 0, "font", 0, NULL));
++  gtk_tree_view_append_column(fd->tv_name, GTK_TREE_VIEW_COLUMN(cl));
++  gtk_container_add(GTK_CONTAINER(hbox), g_object_new(HILDON_TYPE_PANNABLE_AREA, "visible", TRUE, "child", fd->tv_name, NULL));
++  gtk_tree_selection_set_mode(gtk_tree_view_get_selection(fd->tv_name), GTK_SELECTION_BROWSE);
++  g_signal_connect(G_OBJECT(fd->tv_name), "realize", (GCallback)tv_realize, fd->dlg);
++
++  fd->tm_size = GTK_TREE_MODEL(ls_size);
++  fd->tv_size = g_object_new(GTK_TYPE_TREE_VIEW, "visible", TRUE, "hildon-ui-mode", HILDON_UI_MODE_EDIT, "model", ls_size, "enable-search", FALSE, NULL);
++  fd->sel_size = gtk_tree_view_get_selection(fd->tv_size);
++  g_signal_connect(G_OBJECT(gtk_tree_view_get_selection(fd->tv_size)), "changed", (GCallback)sel_changed, fd);
++  pan = g_object_new(HILDON_TYPE_PANNABLE_AREA, "visible", TRUE, "child", fd->tv_size, NULL);
++  cr = gtk_cell_renderer_text_new();
++  gtk_tree_view_append_column(fd->tv_size, gtk_tree_view_column_new_with_attributes("", cr, "text", 0,  NULL));
++  gtk_container_add_with_properties(GTK_CONTAINER(hbox), pan, "expand", FALSE, NULL);
++  gtk_widget_set_size_request(pan, 80, -1);
++  gtk_tree_selection_set_mode(gtk_tree_view_get_selection(fd->tv_size), GTK_SELECTION_BROWSE);
++  g_signal_connect(G_OBJECT(fd->tv_size), "realize", (GCallback)tv_realize, fd->dlg);
++
++  for (Nix = 0 ; Nix < G_N_ELEMENTS(font_sizes) ; Nix++) {
++    str = g_strdup_printf("%d", font_sizes[Nix]);
++    gtk_list_store_append(ls_size, &itr_size);
++    gtk_list_store_set(ls_size, &itr_size,
++      FONT_SIZE_STRING_COLUMN, str, FONT_SIZE_INT_COLUMN, font_sizes[Nix],
++      -1);
++    g_free(str);
++  }
++
++  gtk_widget_set_size_request(hbox, -1, 280);
++  gtk_container_add(GTK_CONTAINER(fd->dlg->vbox), hbox);
++
++  hbox = g_object_new(GTK_TYPE_HBOX, "visible", TRUE, "spacing", 8, NULL);
++  align = g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", 0.0, "yalign", 0.5, "xscale", 1.0, "yscale", 0.0, "child", hbox, NULL);
++  gtk_widget_set_size_request(align, -1, 70);
++  gtk_container_add_with_properties(GTK_CONTAINER(hbox),
++    g_object_new(GTK_TYPE_ALIGNMENT, "visible", TRUE, "xalign", 0.0, "yalign", 0.5, "xscale", 0.0, "yscale", 0.0, "child",
++      g_object_new(GTK_TYPE_LABEL,
++        "visible", TRUE, "use-underline", TRUE, "mnemonic-widget", fd->fg_clr, "label", g_dgettext("gtk20", "Color"), "justify", GTK_JUSTIFY_LEFT, NULL), NULL),
++    "expand", FALSE, NULL);
++  fd->fg_clr = g_object_new(HILDON_TYPE_COLOR_BUTTON, "visible", TRUE, NULL);
++  gtk_container_add_with_properties(GTK_CONTAINER(hbox), font_dialog.fg_clr, "expand", FALSE, NULL);
++  g_signal_connect(G_OBJECT(fd->fg_clr), "notify::color", (GCallback)clr_changed, fd);
++  fd->bg_clr = g_object_new(HILDON_TYPE_COLOR_BUTTON, "visible", TRUE, NULL);
++  g_signal_connect(G_OBJECT(fd->bg_clr), "notify::color", (GCallback)clr_changed, fd);
++  gtk_container_add_with_properties(GTK_CONTAINER(hbox), fd->bg_clr, "expand", FALSE, NULL);
++  gtk_container_add_with_properties(GTK_CONTAINER(font_dialog.dlg->vbox), align, "expand", FALSE, NULL);
++
++  gtk_container_add_with_properties(GTK_CONTAINER(hbox), fd->preview_bg, "expand", TRUE, NULL);
++}
++
++void
++show_font_dialog(GtkWindow *parent)
++{
++  PangoFontDescription *pfd_face = NULL;
++  PangoContext *pctx = gdk_pango_context_get();
++  PangoFontFamily **families = NULL;
++  PangoFontFace **faces = NULL;
++  int n_families = 0, Nix, n_faces = 0, Nix1, size = 0;
++  char *str = NULL, *name = NULL;
++  GtkListStore *ls_name;
++  GtkTreeIter itr_family;
++  GConfClient *g_c = gconf_client_get_default();
++  GdkColor clr, *p_clr;
++
++  /* Create the font dialog if not already done */
++  if (NULL == font_dialog.dlg)
++    create_font_dialog(&font_dialog);
++  gtk_window_set_transient_for(GTK_WINDOW(font_dialog.dlg), parent);
++  if (GTK_WIDGET_REALIZED(GTK_WIDGET(font_dialog.tv_name)))
++    hildon_pannable_area_jump_to(HILDON_PANNABLE_AREA(gtk_widget_get_parent(GTK_WIDGET(font_dialog.tv_name))), -1, 0);
++  if (GTK_WIDGET_REALIZED(GTK_WIDGET(font_dialog.tv_size)))
++    hildon_pannable_area_jump_to(HILDON_PANNABLE_AREA(gtk_widget_get_parent(GTK_WIDGET(font_dialog.tv_size))), -1, 0);
++
++  /* Re-fill the font list */
++  ls_name = GTK_LIST_STORE(font_dialog.tm_name);
++  gtk_list_store_clear(ls_name);
++  pango_context_list_families(pctx, &families, &n_families);
++  for (Nix = 0 ; Nix < n_families ; Nix++)
++    if (pango_font_family_is_monospace(families[Nix])) {
++      pango_font_family_list_faces(families[Nix], &faces, &n_faces);
++      g_qsort_with_data(faces, n_faces, sizeof(PangoFontFace *), (GCompareDataFunc)compare_faces, NULL);
++      for (Nix1 = 0 ; Nix1 < n_faces ; Nix1++) {
++        pfd_face = pango_font_face_describe(faces[Nix1]);
++        str = pango_font_description_to_string(pfd_face);
++        gtk_list_store_append(ls_name, &itr_family);
++        gtk_list_store_set(ls_name, &itr_family,
++          FONT_NAME_STRING_COLUMN, str,         FONT_NAME_FAMILY_COLUMN, families[Nix],
++          FONT_NAME_FACE_COLUMN,   faces[Nix1], FONT_NAME_PFD_COLUMN,    pfd_face,
++          -1);
++        g_free(str);
++      }
++      g_free(faces); faces = NULL;
++      n_faces = 0;
++    }
++  g_free(families);
++
++  /* Init dialog from gconf */
++  /* Font name */
++  name = gconf_client_get_string(g_c, OSSO_XTERM_GCONF_FONT_NAME, NULL);
++  if (!name)
++    name = g_strdup(OSSO_XTERM_DEFAULT_FONT_NAME);
++
++  /* Font size */
++  size = gconf_client_get_int(g_c, OSSO_XTERM_GCONF_FONT_BASE_SIZE, NULL);
++  if (!size)
++    size = OSSO_XTERM_DEFAULT_FONT_BASE_SIZE;
++  if (name && size)
++    select_font(name, size, &font_dialog);
++  g_free(name); name = NULL;
++  size = 0;
++
++  /* Foreground colour */
++  str = gconf_client_get_string(g_c, OSSO_XTERM_GCONF_FONT_COLOR, NULL);
++  if (!str)
++    str = g_strdup(OSSO_XTERM_DEFAULT_FONT_COLOR);
++  gdk_color_parse(str, &clr);
++  g_free(str);
++  g_object_set(G_OBJECT(font_dialog.fg_clr), "color", &clr, NULL);
++
++  /* Background colour */
++  str = gconf_client_get_string(g_c, OSSO_XTERM_GCONF_BG_COLOR, NULL);
++  if (!str)
++    str = g_strdup(OSSO_XTERM_DEFAULT_BG_COLOR);
++  gdk_color_parse(str, &clr);
++  g_free(str);
++  g_object_set(G_OBJECT(font_dialog.bg_clr), "color", &clr, NULL);
++
++  if (GTK_RESPONSE_OK == gtk_dialog_run(font_dialog.dlg)) {
++    GtkTreeIter itr_name, itr_size;
++
++    /* Set new font name and size */
++    if (gtk_tree_selection_get_selected(font_dialog.sel_name, NULL, &itr_name) &&
++        gtk_tree_selection_get_selected(font_dialog.sel_size, NULL, &itr_size)) {
++
++      gtk_tree_model_get(font_dialog.tm_name, &itr_name, FONT_NAME_STRING_COLUMN, &name, -1);
++      gtk_tree_model_get(font_dialog.tm_size, &itr_size, FONT_SIZE_INT_COLUMN, &size, -1);
++
++      if (name) {
++        gconf_client_set_string(g_c, OSSO_XTERM_GCONF_FONT_NAME, name, NULL);
++        g_free(name); name = NULL;
++      }
++      if (size)
++        gconf_client_set_int(g_c, OSSO_XTERM_GCONF_FONT_BASE_SIZE, size, NULL);
++    }
++
++    /* Set foreground colour */
++    g_object_get(G_OBJECT(font_dialog.fg_clr), "color", &p_clr, NULL);
++    str = g_strdup_printf("#%02x%02x%02x", p_clr->red >> 8, p_clr->green >> 8, p_clr->blue >> 8);
++    gconf_client_set_string(g_c, OSSO_XTERM_GCONF_FONT_COLOR, str, NULL);
++    g_free(str);
++    gdk_color_free(p_clr);
++
++    /* Set background colour */
++    g_object_get(G_OBJECT(font_dialog.bg_clr), "color", &p_clr, NULL);
++    str = g_strdup_printf("#%02x%02x%02x", p_clr->red >> 8, p_clr->green >> 8, p_clr->blue >> 8);
++    gconf_client_set_string(g_c, OSSO_XTERM_GCONF_BG_COLOR, str, NULL);
++    g_free(str);
++    gdk_color_free(p_clr);
++  }
++  gtk_widget_hide(GTK_WIDGET(font_dialog.dlg));
++}
+Index: leafpad-0.8.17le/src/font-dialog.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ leafpad-0.8.17le/src/font-dialog.h	2009-11-13 19:34:23.000000000 +0000
+@@ -0,0 +1,12 @@
++#ifndef _FONT_DIALOG_H_
++#define _FONT_DIALOG_H_
++
++#include <gtk/gtk.h>
++
++G_BEGIN_DECLS
++
++void show_font_dialog(GtkWindow *parent);
++
++G_END_DECLS
++
++#endif /* !_FONT_DIALOG_H_ */
+Index: leafpad-0.8.17le/src/undo.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/undo.c	2009-11-13 19:32:14.000000000 +0000
++++ leafpad-0.8.17le/src/undo.c	2009-11-13 19:34:23.000000000 +0000
+@@ -296,6 +296,7 @@
+ 			ui_tmp->start, ui_tmp->end, g_strdup(undo_gstr->str));
+ 		undo_gstr = g_string_erase(undo_gstr, 0, -1);
+ 	}
++
+ }
+ 
+ gboolean undo_undo_real(GtkTextBuffer *buffer)
+Index: leafpad-0.8.17le/src/linenum.c
+===================================================================
+--- leafpad-0.8.17le.orig/src/linenum.c	2009-11-13 19:32:13.000000000 +0000
++++ leafpad-0.8.17le/src/linenum.c	2009-11-13 19:34:23.000000000 +0000
+@@ -18,7 +18,9 @@
+  */
+ 
+ #include <gtk/gtk.h>
+-
++#ifdef USE_HILDON
++#include "linenum.h"
++#endif
+ #define	DV(x)
+ 
+ static gint min_number_window_width;
+@@ -327,6 +329,14 @@
+ 		NULL);
+ 	show_line_numbers(text_view, FALSE);
+ }
++
++//#ifdef USE_HILDON
++gboolean get_line_numbers_visible()
++{
++	return line_number_visible;
++}
++//#endif
++
+ /*
+ static void show_line_numbers(GtkWidget *text_view, gboolean visible)
+ {
+Index: leafpad-0.8.17le/src/linenum.h
+===================================================================
+--- leafpad-0.8.17le.orig/src/linenum.h	2009-11-13 19:32:15.000000000 +0000
++++ leafpad-0.8.17le/src/linenum.h	2009-11-13 19:34:23.000000000 +0000
+@@ -22,5 +22,7 @@
+ 
+ void show_line_numbers(GtkWidget *text_view, gboolean visible);
+ void linenum_init(GtkWidget *text_view);
+-
++//#ifdef USE_HILDON
++gboolean get_line_numbers_visible();
++//#endif
+ #endif /* _LINE_H */

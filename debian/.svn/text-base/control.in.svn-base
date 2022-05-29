@@ -1,0 +1,22 @@
+Source: leafpad
+Section: editors
+Priority: optional
+Maintainer: Carlos Z.F. Liu <carlosliu@users.sourceforge.net>
+Uploaders: @GNOME_TEAM@
+Build-Depends: cdbs,
+               debhelper (>= 5),
+               pkg-config,
+               libgtk2.0-dev (>= 2.10),
+               gnome-pkg-tools
+Standards-Version: 3.7.3
+Homepage: http://tarot.freeshell.org/leafpad/
+
+Package: leafpad
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
+Suggests: evince-gtk
+Description: GTK+ based simple text editor
+ Leafpad is a simple GTK+ based text editor, the user interface is
+ similar to Notepad. It aims to be lighter than GEdit & KWrite,
+ and to be as useful as them.

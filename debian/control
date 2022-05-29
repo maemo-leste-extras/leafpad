@@ -1,0 +1,111 @@
+Source: leafpad
+Section: user/utilities
+Priority: optional
+Maintainer: Mikko Vartiainen <mvartiainen@gmail.com>
+XSBC-Original-Maintainer: Carlos Z.F. Liu <carlosliu@users.sourceforge.net>
+XSBC-Original-Uploaders: 
+Build-Depends: cdbs,
+               debhelper (>= 5),
+               pkg-config,
+               libgtk2.0-dev (>= 2.10),
+               gnome-pkg-tools,
+               libosso-dev,
+               libhildon1-dev,
+               libhildonfm2-dev,
+               intltool
+Standards-Version: 3.7.3
+Homepage: http://tarot.freeshell.org/leafpad/
+XSBC-Bugtracker: https://bugs.maemo.org/enter_bug.cgi?product=Leafpad
+
+Package: leafpad
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends}
+Description: simple text editor
+ Leafpad is a text editor similar to Notepad that emphasizes simplicity.
+ Leafpad is simple to use, and starts up quickly. 
+XB-Maemo-Display-Name: Leafpad
+XB-Maemo-Icon-26:
+ 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
+ fXES/3+3/wHeUGi06msWQQAAAABJRU5ErkJggg==
