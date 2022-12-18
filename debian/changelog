@@ -1,3 +1,9 @@
+leafpad (0.8.18+leste1) unstable; urgency=low
+
+  * Packaging for Maemo/Chimaera
+
+ -- Norayr Chilingarian <norayr@arnet.am>  Mon, 19 Dec 2022 01:19:21 +0400
+
 leafpad (0.8.17le+leste1) unstable; urgency=low
 
   * Packaging for Maemo Leste
