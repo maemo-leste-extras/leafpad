@@ -12,3 +12,4 @@ src/gnomeprint.c
 
 # files added by intltool-prepare
 data/leafpad.desktop.in
+src/font-dialog.c

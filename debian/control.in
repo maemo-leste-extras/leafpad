@@ -5,7 +5,7 @@ Maintainer: Mikko Vartiainen <mvartiainen@gmail.com>
 XSBC-Original-Maintainer: Carlos Z.F. Liu <carlosliu@users.sourceforge.net>
 XSBC-Original-Uploaders: @GNOME_TEAM@
 Build-Depends: cdbs,
-               debhelper (>= 5),
+               debhelper-compat (= 13),
                pkg-config,
                libgtk2.0-dev (>= 2.10),
                gnome-pkg-tools,
@@ -13,7 +13,7 @@ Build-Depends: cdbs,
                libhildon1-dev,
                libhildonfm2-dev,
                intltool
-Standards-Version: 3.7.3
+Standards-Version: 4.6.2
 Homepage: http://tarot.freeshell.org/leafpad/
 XSBC-Bugtracker: https://bugs.maemo.org/enter_bug.cgi?product=Leafpad
 

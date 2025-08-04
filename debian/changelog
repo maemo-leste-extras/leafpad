@@ -1,8 +1,8 @@
-leafpad (0.8.18+leste1) unstable; urgency=low
+leafpad (0.8.19+leste1) unstable; urgency=low
 
-  * Packaging for Maemo/Chimaera
+  * Packaging for Daedalus
 
- -- Norayr Chilingarian <norayr@arnet.am>  Mon, 19 Dec 2022 01:19:21 +0400
+ -- Norayr Chilingarian <norayr@arnet.am>  Mon, 30 May 2022 03:50:21 +0400
 
 leafpad (0.8.17le+leste1) unstable; urgency=low
 
