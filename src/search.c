@@ -400,7 +400,7 @@ gint run_dialog_search(GtkWidget *textview, gint mode)
 #else
 	{
 		gtk_widget_show (pub->mw->find_toolbar);
-		hildon_find_toolbar_highlight_entry (pub->mw->find_toolbar, TRUE);
+		hildon_find_toolbar_highlight_entry (HILDON_FIND_TOOLBAR(pub->mw->find_toolbar), TRUE);
 	}
 
 	if (mode) {

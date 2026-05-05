@@ -341,7 +341,7 @@ GtkWidget *create_text_view(void)
 	GtkTextBuffer *buffer;
 #ifdef USE_HILDON
 	view = hildon_text_view_new();
-	buffer = hildon_text_view_get_buffer(GTK_TEXT_VIEW(view));
+	buffer = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(view));
 #else
 	view = gtk_text_view_new();
 	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));

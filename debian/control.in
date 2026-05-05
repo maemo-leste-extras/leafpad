@@ -5,9 +5,9 @@ Maintainer: Mikko Vartiainen <mvartiainen@gmail.com>
 XSBC-Original-Maintainer: Carlos Z.F. Liu <carlosliu@users.sourceforge.net>
 XSBC-Original-Uploaders: @GNOME_TEAM@
 Build-Depends: cdbs,
-               debhelper (>= 5),
+               debhelper,
                pkg-config,
-               libgtk2.0-dev (>= 2.10),
+               libgtk2.0-dev,
                gnome-pkg-tools,
                libosso-dev,
                libhildon1-dev,

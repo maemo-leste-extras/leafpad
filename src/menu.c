@@ -274,6 +274,6 @@ GtkWidget *create_menu_bar(GtkWidget *window)
 
 	gtk_widget_show_all (GTK_WIDGET (menu));
 
-	return menu;
+	return GTK_WIDGET(menu);
 #endif
 }

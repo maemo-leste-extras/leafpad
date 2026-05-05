@@ -128,7 +128,7 @@ MainWin *create_main_window(void)
 	vbox = gtk_vbox_new(FALSE, 0);
 	gtk_container_add(GTK_CONTAINER(window), vbox);
 	
-	menubar = create_menu_bar(window);
+	menubar = HILDON_APP_MENU(create_menu_bar(window));
 
 #ifdef USE_HILDON
 	//gtk_widget_set_name(window, PACKAGE_NAME);
@@ -160,7 +160,7 @@ MainWin *create_main_window(void)
 		G_CALLBACK(cb_scroll_event), view);
 */		
 	mw->window = window;
-	mw->menubar = menubar;
+	mw->menubar = GTK_WIDGET(menubar);
 	mw->view = view;
 #ifdef USE_HILDON
 	mw->buffer = hildon_text_view_get_buffer(HILDON_TEXT_VIEW(view));
